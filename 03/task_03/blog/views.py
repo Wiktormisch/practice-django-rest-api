@@ -2,6 +2,7 @@ from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import Response
 
+
 ideas = [{"id": 1, "description": "Zbudować aplikację do zarządzania budżetem"}]
 next_id = 2
 
