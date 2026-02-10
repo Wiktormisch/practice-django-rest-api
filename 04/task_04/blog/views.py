@@ -1,26 +1,47 @@
-from django.shortcuts import render
 from .models import Recipe, Ingredient
-from rest_framework import serializers, viewsets
-
-
-
-class RecipeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Recipe
-        fields = "__all__"
+from rest_framework import serializers
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ingredient
-        fields = "__all__"
+        fields = ["id", "name"]
 
 
-class RecipeViewSet(viewsets.ModelViewSet):
-    queryset = Recipe.objects.all()
-    serializer_class = RecipeSerializer
+class RecipeSerializer(serializers.ModelSerializer):
+    ingredients = IngredientSerializer(many=True)
+
+    class Meta:
+        model = Recipe
+        fields = ["id", "title", "ingredients"]
+
+    def create(self, data):
+        ingredients_data = data.pop("ingredients")
+        recipe = Recipe.objects.create(**data)
+
+        for ingredient in ingredients_data:
+            Ingredient.objects.create(
+                recipe=recipe,
+                **ingredient
+            )
+        return recipe
 
 
-class IngredientViewSet(viewsets.ModelViewSet):
-    queryset = Ingredient.objects.all()
-    serializer_class = IngredientSerializer
+class RecipeAPIView(APIView):
+
+    def get(self, request):
+        recipes = Recipe.objects.all()
+        serializer = RecipeSerializer(recipes, many=True)
+
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = RecipeSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Poprawnie dodano przepis"}, status=201)
+
+        return Response(serializer.errors, status=400)
